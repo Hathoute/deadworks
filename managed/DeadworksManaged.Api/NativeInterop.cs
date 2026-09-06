@@ -139,4 +139,7 @@ internal static unsafe class NativeInterop
 	// Game state
 	public static delegate* unmanaged[Cdecl]<void*, int, void> ChangeGameState => (delegate* unmanaged[Cdecl]<void*, int, void>)_cb.ChangeGameState;
 	public static delegate* unmanaged[Cdecl]<uint, uint, void> SetWaitingForPlayersRoster => (delegate* unmanaged[Cdecl]<uint, uint, void>)_cb.SetWaitingForPlayersRoster;
+
+	// Pawn respawn
+	public static delegate* unmanaged[Cdecl]<void*, byte, void> Respawn => (delegate* unmanaged[Cdecl]<void*, byte, void>)_cb.Respawn;
 }
