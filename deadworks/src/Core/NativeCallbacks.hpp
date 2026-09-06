@@ -98,6 +98,7 @@ struct NativeCallbacks {
     void *(__cdecl *CreateDamageInfo)(void *inflictor, void *attacker, void *ability, float damage, int32_t damageType);
     void(__cdecl *DestroyDamageInfo)(void *info);
     void(__cdecl *TakeDamage)(void *victim, void *info);
+    void(__cdecl *ApplyDamage)(void *victim, void *info);
     void(__cdecl *PrecacheHero)(const char *heroName);
     void(__cdecl *RegisterConCommand)(const char *name, const char *description, uint64_t flags);
     void(__cdecl *UnregisterConCommand)(const char *name);

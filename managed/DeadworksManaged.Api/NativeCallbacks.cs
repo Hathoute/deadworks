@@ -83,6 +83,7 @@ internal struct NativeCallbacks
 	public nint CreateDamageInfo;
 	public nint DestroyDamageInfo;
 	public nint TakeDamage;
+	public nint ApplyDamage;
 	public nint PrecacheHero;
 	public nint RegisterConCommand;
 	public nint UnregisterConCommand;
