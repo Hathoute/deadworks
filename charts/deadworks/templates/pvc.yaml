@@ -1,0 +1,21 @@
+{{- range $name, $p := .Values.persistence }}
+{{- if kindIs "map" $p }}
+{{- if and $p.enabled $.Values.persistence.enabled (not $p.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "deadworks.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "deadworks.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with $p.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+{{- end }}
+{{- end }}
+{{- end }}

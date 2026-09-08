@@ -1,0 +1,171 @@
+# Default values for deadworks.
+# The container is configured through environment variables, mirroring the
+# `.env.example` file at the repository root. The chart renders the
+# corresponding env keys into a ConfigMap and injects them via envFrom.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/deadworks-net/deadworks
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# The .env template
+# ---------------------------------------------------------------------------
+# Each field below is written to the env ConfigMap as its uppercase env key
+# (SERVER_PORT, TV_ENABLE, ...). Steam credentials are rendered into a Secret
+# (see `templates/secret-env.yaml`); to supply them from an external Secret
+# instead, set `existingEnvSecret` and leave these empty.
+steam:
+  user: ""
+  password: ""
+
+server:
+  port: 27015
+  map: dl_midtown
+  password: ""
+  rconPassword: ""
+
+protonVersion: GE-Proton10-33
+dotnetVersion: "10.0.0"
+
+# Extra arguments passed to deadworks.exe (appended after defaults)
+deadworksArgs: ""
+
+tv:
+  enable: false
+  delay: 0
+  broadcastUrl: http://hltv-relay:3000/publish
+  broadcastAuth: deadlock-relay
+
+# Use an already-existing Secret (keys = env names, e.g. STEAM_LOGIN /
+# STEAM_PASSWORD) instead of rendering the `steam` credentials. When set,
+# the STEAM_* keys are omitted from the chart-managed ConfigMap.
+existingEnvSecret: ""
+
+# Additional existing Secrets to load environment variables from.
+envFromSecrets: []
+  # - deadworks-steam-credentials
+
+# ---------------------------------------------------------------------------
+# Networking
+# ---------------------------------------------------------------------------
+service:
+  enabled: true
+  type: LoadBalancer
+  # Overrides the game port. Defaults to server.port.
+  port: ""
+  # NodePort when service.type is NodePort (ignored otherwise).
+  nodePort: ""
+  externalTrafficPolicy: ""
+  # Extra ports to expose, e.g. HLTV broadcast (TCP 29015).
+  extraPorts: []
+    # - name: hltv
+    #   port: 29015
+    #   targetPort: 29015
+    #   protocol: UDP
+
+# ---------------------------------------------------------------------------
+# Storage
+# ---------------------------------------------------------------------------
+# Mirrors the named volumes from docker-compose.yaml. When `enabled` is false
+# an emptyDir is used instead (game files re-download on every restart).
+persistence:
+  # Master switch. When false, all data volumes become emptyDir and no PVCs
+  # are created (game files re-download on every restart).
+  enabled: true
+  proton:
+    enabled: true
+    mountPath: /opt/proton
+    size: 5Gi
+    storageClass: ""
+    existingClaim: ""
+  gamedata:
+    enabled: true
+    mountPath: /home/steam/server
+    size: 40Gi
+    storageClass: ""
+    existingClaim: ""
+  compatdata:
+    enabled: true
+    mountPath: /home/steam/.steam/steam/steamapps/compatdata
+    size: 5Gi
+    storageClass: ""
+    existingClaim: ""
+  dotnet-cache:
+    enabled: true
+    mountPath: /opt/dotnet-cache
+    size: 2Gi
+    storageClass: ""
+    existingClaim: ""
+
+# Mount the node's /etc/machine-id read-only, like docker-compose does, so
+# the Wine prefix keeps a stable machine id across reschedules.
+hostMachineId: true
+machineIdHostPath: /etc/machine-id
+
+# ---------------------------------------------------------------------------
+# Probes
+# ---------------------------------------------------------------------------
+# The startup probe tolerates the very first boot, which downloads Proton,
+# the Deadlock server files via SteamCMD and the .NET runtime (can take hours
+# depending on bandwidth). The game port only opens once the server is up.
+startupProbe:
+  enabled: true
+  periodSeconds: 30
+  failureThreshold: 360   # ~3 hours
+
+livenessProbe:
+  enabled: false
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: false
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# ---------------------------------------------------------------------------
+# Workload
+# ---------------------------------------------------------------------------
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: false
+  # runAsNonRoot: false
+
+resources: {}
+  # requests:
+  #   cpu: 1
+  #   memory: 2Gi
+  # limits:
+  #   cpu: 4
+  #   memory: 8Gi
+
+# Deployment strategy is always Recreate (RWO volumes + stateful game server).
+terminationGracePeriodSeconds: 60
+
+extraVolumes: []
+extraVolumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

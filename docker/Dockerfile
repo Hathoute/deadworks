@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake ninja-build unzip git python3 \
     && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
     && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" > /etc/apt/sources.list.d/llvm.list \
+    && cat /etc/apt/trusted.gpg.d/apt.llvm.org.asc | apt-key add - \
     && apt-get update && apt-get install -y --no-install-recommends \
     clang-20 lld-20 llvm-20 \
     && rm -rf /var/lib/apt/lists/*
