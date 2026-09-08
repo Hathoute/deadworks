@@ -98,6 +98,16 @@ persistence:
     size: 5Gi
     storageClass: ""
     existingClaim: ""
+  # SteamCMD login state (loginusers.vdf, ssfn* Steam Guard tokens). Keeping
+  # it avoids re-authentication (and Steam Guard re-approval) on restarts.
+  # Mounted at the config/ subdir so the steamcmd binaries shipped in the
+  # image are not shadowed (K8s volumes are not seeded from image content).
+  steamcmd:
+    enabled: true
+    mountPath: /home/steam/steamcmd/config
+    size: 1Gi
+    storageClass: ""
+    existingClaim: ""
   dotnet-cache:
     enabled: true
     mountPath: /opt/dotnet-cache
@@ -140,8 +150,11 @@ readinessProbe:
 # ---------------------------------------------------------------------------
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  # The entrypoint runs as root but drops to the `steam` user (uid 1000) via
+  # gosu for SteamCMD and the game; fsGroup makes mounted volumes writable
+  # by that user.
+  fsGroup: 1000
 
 securityContext: {}
   # capabilities:

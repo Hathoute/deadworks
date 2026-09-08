@@ -15,6 +15,7 @@ services:
       - proton:/opt/proton
       - gamedata:/home/steam/server
       - compatdata:/home/steam/.steam/steam/steamapps/compatdata
+      - steamcmd:/home/steam/steamcmd
       - dotnet-cache:/opt/dotnet-cache
     restart: unless-stopped
 
@@ -22,4 +23,5 @@ volumes:
   proton:
   gamedata:
   compatdata:
+  steamcmd:
   dotnet-cache:
