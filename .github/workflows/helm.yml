@@ -1,0 +1,69 @@
+name: Helm
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Lint chart
+        run: helm lint charts/deadworks
+
+      - name: Template chart (smoke test)
+        run: |
+          helm template smoke charts/deadworks \
+            --set steam.user=smoke \
+            --set steam.password=smoke \
+            > /dev/null
+
+      - name: Helm meta
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Package and push chart
+        env:
+          REPOSITORY: ${{ github.repository }}
+          META_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          REPOSITORY="${REPOSITORY,,}"
+          CHART_BASE="$(awk '$1 == "version:" { print $2 }' charts/deadworks/Chart.yaml)"
+          mkdir -p dist
+          while IFS= read -r ref; do
+            tag="${ref##*:}"
+            case "$tag" in
+              sha-*)  version="${CHART_BASE}-${tag/-/.}" ;;
+              latest|pr-*) continue ;;
+              *.*.*) version="$tag" ;;
+              *.*)   version="$tag.0" ;;
+              *)     continue ;;
+            esac
+            helm package charts/deadworks --version "$version" -d dist/
+            helm push "dist/deadworks-$version.tgz" "oci://ghcr.io/$REPOSITORY"
+          done <<< "$META_TAGS"

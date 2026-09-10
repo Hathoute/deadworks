@@ -1,0 +1,11 @@
+apiVersion: v2
+name: deadworks
+description: A Helm chart for the Deadworks Deadlock dedicated server (Proton/Wine)
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/Deadworks-net/deadworks
+keywords:
+  - deadlock
+  - deadworks
+  - gameserver

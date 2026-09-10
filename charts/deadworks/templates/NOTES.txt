@@ -1,0 +1,24 @@
+{{ .Release.Name }} has been deployed.
+
+1. Watch the first boot (downloads Proton, Deadlock server files via
+   SteamCMD and the .NET runtime — this can take a while):
+
+   kubectl logs -f deployment/{{ include "deadworks.fullname" . }}
+
+2. Get the server address:
+
+{{- if eq .Values.service.type "LoadBalancer" }}
+   kubectl get svc {{ include "deadworks.fullname" . }} \
+     -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+{{- else }}
+   kubectl get svc {{ include "deadworks.fullname" . }}
+{{- end }}
+
+3. Connect from the game console:
+
+   connect <server-address>:{{ include "deadworks.gamePort" . }}
+
+Server settings (map, port, TV, ...) live under the "steam", "server"
+and "tv" sections of the chart values — the equivalent of the
+repository's .env.example file. Steam credentials are stored in the
+Secret "{{ include "deadworks.envSecretName" . }}".

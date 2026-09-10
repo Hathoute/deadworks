@@ -1,0 +1,32 @@
+{{/*
+Renders the ".env" file content: one explicit entry per key, mirroring
+.env.example. Consumed by the container via envFrom -> behaves exactly
+like `env_file: .env` in docker-compose.
+*/}}
+{{- if not .Values.existingEnvSecret }}
+{{- if not .Values.steam.user }}
+{{- fail "steam.user is required (or provide STEAM_LOGIN via existingEnvSecret)" }}
+{{- end }}
+{{- if not .Values.steam.password }}
+{{- fail "steam.password is required (or provide STEAM_PASSWORD via existingEnvSecret)" }}
+{{- end }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "deadworks.envConfigMapName" . }}
+  labels:
+    {{- include "deadworks.labels" . | nindent 4 }}
+data:
+  SERVER_PORT: {{ .Values.server.port | default 27015 | toString | quote }}
+  SERVER_MAP: {{ .Values.server.map | default "dl_midtown" | quote }}
+  SERVER_PASSWORD: {{ .Values.server.password | default "" | quote }}
+  RCON_PASSWORD: {{ .Values.server.rconPassword | default "" | quote }}
+  PROTON_VERSION: {{ .Values.protonVersion | default "GE-Proton10-33" | quote }}
+  DOTNET_VERSION: {{ .Values.dotnetVersion | default "10.0.0" | quote }}
+  DEADWORKS_ARGS: {{ .Values.deadworksArgs | default "" | quote }}
+  DEADWORKS_OVERRIDE_PLUGINS: {{ ternary "1" "0" (gt (len .Values.server.plugins) 0) | quote }}
+  TV_ENABLE: {{ ternary "1" "0" .Values.tv.enable | quote }}
+  TV_DELAY: {{ .Values.tv.delay | default 0 | toString | quote }}
+  TV_BROADCAST_URL: {{ .Values.tv.broadcastUrl | default "http://hltv-relay:3000/publish" | quote }}
+  TV_BROADCAST_AUTH: {{ .Values.tv.broadcastAuth | default "deadlock-relay" | quote }}

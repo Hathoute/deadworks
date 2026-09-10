@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deadworks.fullname" . }}
+  labels:
+    {{- include "deadworks.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "deadworks.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "deadworks.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.server.plugins }}
+      initContainers:
+        {{- range $i, $img := .Values.server.plugins }}
+        - name: plugins-{{ $i }}
+          image: {{ $img | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "cp -r /opt/deadworks/plugins/. /plugins-out/"]
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins-out
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "deadworks.envConfigMapName" . }}
+            - secretRef:
+                name: {{ include "deadworks.envSecretName" . }}
+            {{- range .Values.envFromSecrets }}
+            - secretRef:
+                {{- if kindIs "string" . }}
+                name: {{ . }}
+                {{- else }}
+                name: {{ .name }}
+                {{- end }}
+            {{- end }}
+          ports:
+            - name: game-udp
+              containerPort: {{ include "deadworks.gamePort" . }}
+              protocol: UDP
+            - name: game-tcp
+              containerPort: {{ include "deadworks.gamePort" . }}
+              protocol: TCP
+            {{- range .Values.service.extraPorts }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort | default .port }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            tcpSocket:
+              port: game-tcp
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            tcpSocket:
+              port: game-tcp
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            tcpSocket:
+              port: game-tcp
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.hostMachineId }}
+            - name: machine-id
+              mountPath: /etc/machine-id
+              readOnly: true
+            {{- end }}
+            {{- range $name, $p := $.Values.persistence }}
+            {{- if kindIs "map" $p }}
+            - name: {{ $name }}
+              mountPath: {{ $p.mountPath }}
+            {{- end }}
+            {{- end }}
+            - name: plugins
+              mountPath: /opt/deadworks/plugins
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.hostMachineId }}
+        - name: machine-id
+          hostPath:
+            path: {{ .Values.machineIdHostPath }}
+            type: File
+        {{- end }}
+        {{- range $name, $p := $.Values.persistence }}
+        {{- if kindIs "map" $p }}
+        - name: {{ $name }}
+          {{- if and $p.enabled $.Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ $p.existingClaim | default (printf "%s-%s" (include "deadworks.fullname" $) $name) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        - name: plugins
+          emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
