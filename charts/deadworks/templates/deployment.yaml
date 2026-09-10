@@ -27,6 +27,18 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.server.plugins }}
+      initContainers:
+        {{- range $i, $img := .Values.server.plugins }}
+        - name: plugins-{{ $i }}
+          image: {{ $img | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "cp -r /opt/deadworks/plugins/. /plugins-out/"]
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins-out
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -95,6 +107,8 @@ spec:
               mountPath: {{ $p.mountPath }}
             {{- end }}
             {{- end }}
+            - name: plugins
+              mountPath: /opt/deadworks/plugins
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -118,6 +132,8 @@ spec:
           {{- end }}
         {{- end }}
         {{- end }}
+        - name: plugins
+          emptyDir: {}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

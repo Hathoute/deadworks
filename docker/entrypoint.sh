@@ -18,6 +18,7 @@ TV_BROADCAST_AUTH="${TV_BROADCAST_AUTH:-}"
 PROTON_VERSION="${PROTON_VERSION:-GE-Proton10-33}"
 DOTNET_VERSION="${DOTNET_VERSION:-10.0.0}"
 DEADWORKS_ARGS="${DEADWORKS_ARGS:-}"
+DEADWORKS_OVERRIDE_PLUGINS="${DEADWORKS_OVERRIDE_PLUGINS:-0}"
 
 INSTALL_DIR="/home/steam/server"
 PROTON_DIR="/opt/proton"
@@ -177,6 +178,23 @@ chown -R steam:steam "${PFXDIR}"
 echo "[phase 5] Deadworks deployed."
 ls -la "${WIN64_DIR}/deadworks.exe"
 ls -la "${WIN64_DIR}/managed/"
+
+# =============================================================================
+# Phase 5.5: Override plugins
+# =============================================================================
+MANAGED_PLUGINS_DIR="${WIN64_DIR}/managed/plugins"
+
+if [ "$DEADWORKS_OVERRIDE_PLUGINS" = "1" ]; then
+    echo "[phase 5.5] Overriding plugins..."
+    rm -rf "${MANAGED_PLUGINS_DIR:?}"/*
+    mkdir -p "${MANAGED_PLUGINS_DIR}"
+    if [ -d "/opt/deadworks/plugins" ] && [ -n "$(ls -A /opt/deadworks/plugins 2>/dev/null)" ]; then
+        mv -f /opt/deadworks/plugins/* "${MANAGED_PLUGINS_DIR}/"
+    fi
+    chown -R steam:steam "${MANAGED_PLUGINS_DIR}"
+    echo "[phase 5.5] Plugins replaced:"
+    ls -la "${MANAGED_PLUGINS_DIR}"
+fi
 
 # =============================================================================
 # Phase 6: Launch deadworks server

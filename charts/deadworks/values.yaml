@@ -31,6 +31,13 @@ server:
   map: dl_midtown
   password: ""
   rconPassword: ""
+  # Plugin images (lightweight storage-only images carrying their payload in
+  # /opt/deadworks/plugins). Each image is mounted by an init container and
+  # its plugins are copied into the server, replacing all built-in plugins.
+  # When non-empty, the DEADWORKS_OVERRIDE_PLUGINS env var is set to 1.
+  plugins: []
+    # - ghcr.io/deadworks-net/my-plugin:1.0.0
+    # - ghcr.io/deadworks-net/other-plugin:latest
 
 protonVersion: GE-Proton10-33
 dotnetVersion: "10.0.0"
